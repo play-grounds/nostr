@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+  <title>test</title>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <link rel='stylesheet' type='text/css' media='screen' href='main.css'>
+  <script type="module">
+
+    import { h, html, Component, render } from './js/spux.js'
+
+    const num = 16
+
+    import randombytes from 'https://cdn.skypack.dev/randombytes';
+
+
+    var rnd = Array.from(randombytes(16))
+    console.log(rnd)
+
+    render(html`
+      Random Bytes (${num})
+      <hr/>
+      ${rnd.map(i => { console.log(i); return html`${i} ` } )}
+
+
+    `, document.body)
+
+  </script>
+</head>
+<body>
+</body>
+</html>
