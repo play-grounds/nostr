@@ -1,0 +1,2 @@
+# nostr
+nostr play
