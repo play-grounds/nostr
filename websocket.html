@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+  <title>websocket</title>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <link rel='stylesheet' type='text/css' media='screen' href='main.css'>
+  <script type="module">
+
+  import { h, html, Component, render } from './js/spux.js'
+
+  import ReconnectingWebSocket from 'https://cdn.skypack.dev/reconnecting-websocket'
+
+  var relay = 'wss://nostr.rocks/'
+  var relay = 'wss://nostr-pub.wellorder.net/'
+  
+  const rws = new ReconnectingWebSocket(relay)
+  var connected = false
+
+  rws.addEventListener('open', () => {
+    console.log('connected to', relay)
+    connected = true
+    renderAll()
+  })
+
+  function renderAll() {
+    render(html`
+    Connecting to (${relay}) : ${connected.toString()}
+
+  `, document.body)
+  }
+
+  renderAll()
+
+  </script>
+</head>
+<body>
+</body>
+</html>
