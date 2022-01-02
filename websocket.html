@@ -1,41 +1,24 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset='utf-8'>
-  <meta http-equiv='X-UA-Compatible' content='IE=edge'>
-  <title>websocket</title>
-  <meta name='viewport' content='width=device-width, initial-scale=1'>
-  <link rel='stylesheet' type='text/css' media='screen' href='main.css'>
-  <script type="module">
-
-  import { h, html, Component, render } from './js/spux.js'
-
-  import ReconnectingWebSocket from 'https://cdn.skypack.dev/reconnecting-websocket'
-
-  var relay = 'wss://nostr.rocks/'
-  var relay = 'wss://nostr-pub.wellorder.net/'
-  
-  const rws = new ReconnectingWebSocket(relay)
-  var connected = false
-
-  rws.addEventListener('open', () => {
-    console.log('connected to', relay)
-    connected = true
-    renderAll()
-  })
-
-  function renderAll() {
-    render(html`
-    <h3>Testing Connection</h3>
-    ${relay} <span style="color:${connected.toString()?'green':'red'}">•</span>
-
-  `, document.body)
-  }
-
-  renderAll()
-
-  </script>
-</head>
-<body style="font-family: monospace; font-size: 28px;">
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>websocket</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script type="application/json" id="data">
+      [
+        { "id": "wss://nostr-pub.wellorder.net" },
+        { "id": "wss://relayer.fiatjaf.com" },
+        { "id": "wss://nostr.rocks" },
+        { "id": "wss://rsslay.fiatjaf.com" },
+        { "id": "wss://nostr-relay.herokuapp.com" },
+        { "id": "wss://freedom-relay.herokuapp.com/ws" },
+        { "id": "wss://nodestr-relay.dolu.dev/ws" },
+        { "id": "wss://nostrrr.bublina.eu.org" },
+        { "id": "wss://nostr-relay.freeberty.ne" }
+      ]
+    </script>
+    <script type="module" src="./js/websocket.js"></script>
+  </head>
+  <body style="font-family: monospace; font-size: 28px;"></body>
 </html>
