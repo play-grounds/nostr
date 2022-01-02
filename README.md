@@ -3,4 +3,4 @@ nostr play
 
 - [randombytes](./randombytes.html)
 - [keys](./keys.html)
-- [registry](./registry.html)
+- [websocket](./websocket.html)
