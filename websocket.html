@@ -26,7 +26,8 @@
 
   function renderAll() {
     render(html`
-    Connecting to (${relay}) : ${connected.toString()}
+    <h3>Testing Connection</h3>
+    ${relay} <span style="color:${connected.toString()?'green':'red'}">•</span>
 
   `, document.body)
   }
@@ -35,6 +36,6 @@
 
   </script>
 </head>
-<body>
+<body style="font-family: monospace; font-size: 28px;">
 </body>
 </html>
