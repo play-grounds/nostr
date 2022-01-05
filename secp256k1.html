@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>keys</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" type="text/css" media="screen" href="css/spux.css" />
+    <script type="module">
+      import {
+        h,
+        html,
+        Component,
+        render
+      } from 'https://unpkg.com/htm/preact/standalone.module.js'
+
+      import secp256k1 from 'https://cdn.skypack.dev/@wangshijun/secp256k1'
+
+      import { Buffer } from 'https://cdn.skypack.dev/buffer'
+
+      import randomBytes from 'https://cdn.skypack.dev/randombytes'
+
+      // generate privKey
+      function getPrivateKey () {
+        while (true) {
+          const privKey = randomBytes(32)
+          if (secp256k1.privateKeyVerify(privKey)) return privKey
+        }
+      }
+
+      // generate private and public keys
+      const privKey = getPrivateKey()
+      const pubKey = secp256k1.publicKeyCreate(getPrivateKey())
+
+      // compressed public key from X and Y
+      function hashfn (x, y) {
+        const pubKey = new Uint8Array(33)
+        pubKey[0] = (y[31] & 1) === 0 ? 0x02 : 0x03
+        pubKey.set(x, 1)
+        return pubKey
+      }
+
+      // get X point of ecdh
+      const ecdhPointX = secp256k1.ecdh(
+        pubKey,
+        privKey,
+        { hashfn },
+        Buffer.alloc(33)
+      )
+      console.log(ecdhPointX.toString('hex'))
+
+      render(
+        html`
+          <h2>ecdhPointX</h2>
+          <hr />
+          ${ecdhPointX.toString('hex')}
+          <hr />
+        `,
+        document.body
+      )
+    </script>
+  </head>
+  <body style="font-family: monospace; font-size: 28px;"></body>
+</html>

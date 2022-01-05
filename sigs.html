@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>keys</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" type="text/css" media="screen" href="css/spux.css" />
+    <script type="module">
+      import {
+        h,
+        html,
+        Component,
+        render
+      } from 'https://unpkg.com/htm/preact/standalone.module.js'
+      import secp256k1 from 'https://cdn.skypack.dev/secp256k1'
+      import randombytes from 'https://cdn.skypack.dev/randombytes'
+
+      // or require('secp256k1/elliptic')
+      //   if you want to use pure js implementation in node
+
+      // generate message to sign
+      // message should have 32-byte length, if you have some other length you can hash message
+      // for example `msg = sha256(rawMessage)`
+      const msg = randombytes(32)
+      console.log(randombytes)
+      console.log(msg)
+
+      // generate privKey
+      let privKey
+      do {
+        privKey = randombytes(32)
+      } while (!secp256k1.privateKeyVerify(privKey))
+
+      // get the public key in a compressed format
+      const pubKey = secp256k1.publicKeyCreate(privKey)
+
+      // sign the message
+      const sigObj = secp256k1.ecdsaSign(msg, privKey)
+
+      // verify the signature
+      var verified = secp256k1.ecdsaVerify(sigObj.signature, msg, pubKey)
+      console.log('verified', verified)
+      console.log(verified)
+      // => true
+
+      render(
+        html`
+        <h2>Testing Keys</h2>
+        <hr/>
+        msg: ${Array.from(msg)}
+        <br />
+        privKey: ${Array.from(privKey)}
+        <br />
+        pubKey: ${Array.from(pubKey)}
+        <br />
+        ecdsa signature: ${Array.from(sigObj.signature)}
+        <br />
+        verified: ${verified.toString()}
+        <hr/>
+        `,
+        document.body
+      )
+    </script>
+  </head>
+  <body style="font-family: monospace; font-size: 28px;">
+  </body>
+</html>

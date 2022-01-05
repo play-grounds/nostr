@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>keys</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" type="text/css" media="screen" href="css/spux.css" />
+
+    <script type="module">
+      import {
+        h,
+        html,
+        Component,
+        render
+      } from 'https://unpkg.com/htm/preact/standalone.module.js'
+
+      import {
+        generateMnemonic,
+        validateMnemonic
+      } from 'https://cdn.skypack.dev/@scorum/bip39'
+
+      import wordList from './js/wordlist.js'
+
+      import { relayPool } from 'https://cdn.skypack.dev/nostr-tools'
+
+      console.log(generateMnemonic)
+      console.log('wordList', wordList)
+      var mn = generateMnemonic(wordList, 64)
+      // var mn = generateMnemonic(wordList, 128)
+
+      render(
+        html`
+          1
+        `,
+        document.body
+      )
+    </script>
+  </head>
+  <body style="font-family: monospace; font-size: 28px;"></body>
+</html>
