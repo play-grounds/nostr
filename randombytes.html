@@ -1,33 +1,58 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset='utf-8'>
-  <meta http-equiv='X-UA-Compatible' content='IE=edge'>
-  <title>test</title>
-  <meta name='viewport' content='width=device-width, initial-scale=1'>
-  <link rel='stylesheet' type='text/css' media='screen' href='main.css'>
-  <script type="module">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>keys</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      media="screen"
+      href="css/tailwind.css"
+    />
+    <script type="module">
+      import {
+        h,
+        html,
+        Component,
+        render
+      } from 'https://unpkg.com/htm/preact/standalone.module.js'
+      import secp256k1 from 'https://cdn.skypack.dev/secp256k1'
+      import randombytes from 'https://cdn.skypack.dev/randombytes'
 
-    import { h, html, Component, render } from 'https://unpkg.com/htm/preact/standalone.module.js'
+      import Navbar from './components/Navbar.js'
 
-    const num = 16
+      var num = 32
+      const random = randombytes(num)
+      console.log(randombytes)
 
-    import randombytes from 'https://cdn.skypack.dev/randombytes';
+      // generate privKey
+      let privKey
+      do {
+        privKey = randombytes(32)
+      } while (!secp256k1.privateKeyVerify(privKey))
 
+      render(
+        html`
+          <${Navbar} title="nostr" sub="keys" />
 
-    var rnd = Array.from(randombytes(16))
-    console.log(rnd)
+          <pre class="px-24 py-12">
 
-    render(html`
-      Random Bytes (${num})
-      <hr/>
-      ${rnd.map(i => { console.log(i); return html`${i} ` } )}
+            <div class="flex">
+              <span class="text-sm border border-2 rounded-l px-4 py-2 bg-gray-300 whitespace-no-wrap">Number of Bytes:</span>
+              <input name="field_name" class="border border-2 rounded-r px-4 py-2 w-full" type="text" placeholder="Private key here..." value="${num}" />
+            </div>
 
-
-    `, document.body)
-
-  </script>
-</head>
-<body style="font-family: monospace; font-size: 28px;">
-</body>
+            <br />
+            <hr />
+            Random Bytes : ${Array.from(privKey)}
+            <hr />
+          </pre>
+        `,
+        document.body
+      )
+    </script>
+  </head>
+  <body style="font-family: monospace; font-size: 14px;"></body>
 </html>
