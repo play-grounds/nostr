@@ -6,17 +6,7 @@ import ReconnectingWebSocket from 'https://cdn.skypack.dev/reconnecting-websocke
 var relay = 'wss://nostr.rocks/'
 var relay = 'wss://nostr-pub.wellorder.net/'
 
-const relays = [
-  { id: 'wss://nostr-pub.wellorder.net' },
-  { id: 'wss://relayer.fiatjaf.com' },
-  { id: 'wss://nostr.rocks' },
-  { id: 'wss://rsslay.fiatjaf.com' },
-  { id: 'wss://nostr-relay.herokuapp.com' },
-  { id: 'wss://freedom-relay.herokuapp.com/ws' },
-  { id: 'wss://nodestr-relay.dolu.dev/ws' },
-  { id: 'wss://nostrrr.bublina.eu.org' },
-  { id: 'wss://nostr-relay.freeberty.net' }
-]
+const relays = di.data
 
 const rws = []
 
