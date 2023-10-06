@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      main {
+        width: 80%; /* or any specific width according to your design */
+        max-width: 800px; /* prevents the content from stretching too wide on large screens */
+        margin: 50px auto; /* top/bottom margin and auto left/right margin for centering */
+      }
+
+      label {
+        display: block;
+        font-size: 18px;
+        margin-bottom: 10px;
+        color: #555;
+      }
+
+      input {
+        width: calc(100% - 20px);
+        padding: 10px;
+        font-size: 16px;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+        outline: none;
+        box-sizing: border-box;
+      }
+
+      input:focus {
+        border-color: #66afe9;
+        box-shadow: 0 0 5px rgba(102, 175, 233, 0.5);
+      }
+
+      /* Navbar styles */
+      nav {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 50px;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e5e5e5;
+        box-sizing: border-box;
+        flex-wrap: wrap;
+      }
+
+      nav a {
+        color: #6c757d;
+        text-decoration: none;
+        margin-left: 140px;
+        padding: 0 15px;
+      }
+
+      nav button {
+        color: #6c757d;
+        text-decoration: none;
+        padding: 0 15px;
+        border: none;
+        background: none;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      import { html, render, Component } from './js/standalone.module.js'
+      import Navbar from './js/navbar2.js'
+      import base58 from 'https://esm.sh/base58check'
+
+      const links = [
+        {
+          '@id': 'https://github.com/ursuscamp/nomen/blob/master/docs/SPEC.md',
+          label: 'Base58'
+        }
+      ]
+
+      function isValidHex(hex) {
+        const regex = /^[0-9a-fA-F]+$/
+        return regex.test(hex)
+      }
+
+      function hexToUint8Array(hexString) {
+        const bytes = new Uint8Array(Math.ceil(hexString.length / 2))
+        for (let i = 0; i < bytes.length; i++) {
+          bytes[i] = parseInt(hexString.substr(i * 2, 2), 16)
+        }
+        return bytes
+      }
+
+      function uint8ArrayToHex(byteArray) {
+        return Array.from(byteArray)
+          .map(byte => byte.toString(16).padStart(2, '0'))
+          .join('')
+      }
+
+      class Converter extends Component {
+        constructor(props) {
+          super(props)
+          this.state = {
+            b58: '',
+            hex: ''
+          }
+        }
+
+        handleBase58Change = e => {
+          const b58 = e.target.value
+
+          try {
+            console.log(`Input Base58: ${b58}`)
+
+            // Decode Base58 to Uint8Array and log the resulting array
+            const byteArray = base58.decode(b58)
+            console.log(`Decoded Byte Array:`, byteArray)
+
+            // Convert Uint8Array to hex and log the resulting string
+            const hex = uint8ArrayToHex(byteArray.data)
+            console.log(`Converted Hex: ${hex}`)
+
+            // Ensure that the hex string is valid
+            if (!isValidHex(hex)) {
+              console.error('Invalid hex after conversion')
+              return
+            }
+
+            this.setState({ b58, hex })
+          } catch (error) {
+            console.error('Invalid Base58:', error)
+          }
+        }
+
+        handleHexChange = e => {
+          const hex = e.target.value
+          // Validate the hex input
+          if (!isValidHex(hex)) {
+            console.error('Invalid hex input')
+            return
+          }
+          try {
+            // Ensure byte length is even for encoding
+            const adjustedHex = hex.length % 2 === 0 ? hex : `0${hex}`
+            console.log(`Adjusted Hex: ${adjustedHex}`)
+
+            // Convert hex to Uint8Array and log the resulting array
+            const byteArray = hexToUint8Array(adjustedHex)
+            console.log(`Byte Array:`, byteArray)
+
+            // Encode to Base58 and log the result
+            const b58 = base58.encode(adjustedHex)
+            console.log(`Base58: ${b58}`)
+
+            this.setState({ b58, hex })
+          } catch (error) {
+            console.error('Invalid hex:', error)
+          }
+        }
+
+        render() {
+          return html`
+            <main>
+              <label>Hex: </label>
+              <input
+                type="text"
+                value=${this.state.hex}
+                onInput=${this.handleHexChange}
+              />
+            </main>
+            <main>
+              <label>Base58: </label>
+              <input
+                type="text"
+                value=${this.state.b58}
+                onInput=${this.handleBase58Change}
+              />
+            </main>
+          `
+        }
+      }
+
+      const renderApp = () => {
+        render(
+          html`
+            <${Navbar} links=${links} />
+            <${Converter} />
+          `,
+          document.body
+        )
+      }
+
+      // Initial render
+      renderApp()
+    </script>
+  </body>
+</html>
