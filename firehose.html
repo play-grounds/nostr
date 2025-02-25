@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nostr Firehose</title>
+    <script src="https://unpkg.com/preact@10.13.1/dist/preact.min.js"></script>
+    <script src="https://unpkg.com/preact@10.13.1/dist/preact-compat.min.js"></script>
+    <script src="https://unpkg.com/htm@3.1.1/dist/htm.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/nostr-tools@1.12.0/lib/nostr.bundle.js"></script>
+  </head>
+  <body class="bg-gray-900 text-white min-h-screen">
+    <div id="app"></div>
+
+    <script>
+      const { h, render, Component } = preact
+      const html = htm.bind(h)
+
+      class NostrFirehose extends Component {
+        constructor(props) {
+          super(props)
+          this.state = {
+            events: [],
+            connected: false,
+            relay: this.getRelayFromQueryString() || 'wss://relay.damus.io',
+            customRelay: '',
+            error: null,
+            maxEvents: 100,
+            autoScroll: true
+          }
+          this.relayConnection = null
+          this.handleEvent = this.handleEvent.bind(this)
+          this.connectToRelay = this.connectToRelay.bind(this)
+          this.handleRelayChange = this.handleRelayChange.bind(this)
+          this.handleCustomRelayChange = this.handleCustomRelayChange.bind(this)
+          this.handleCustomRelaySubmit = this.handleCustomRelaySubmit.bind(this)
+          this.toggleAutoScroll = this.toggleAutoScroll.bind(this)
+        }
+
+        getRelayFromQueryString() {
+          const params = new URLSearchParams(window.location.search)
+          return params.get('relay')
+        }
+
+        componentDidMount() {
+          this.connectToRelay()
+        }
+
+        componentWillUnmount() {
+          if (this.relayConnection) {
+            this.relayConnection.close()
+          }
+        }
+
+        connectToRelay() {
+          try {
+            if (this.relayConnection) {
+              this.relayConnection.close()
+            }
+
+            this.setState({ connected: false, error: null, events: [] })
+
+            console.log(`Connecting to relay: ${this.state.relay}`)
+
+            this.relayConnection = window.NostrTools.relayInit(this.state.relay)
+
+            this.relayConnection.on('connect', () => {
+              console.log(`Connected to ${this.state.relay}`)
+              this.setState({ connected: true, error: null })
+
+              // Subscribe to all events with a limit of 10
+              const sub = this.relayConnection.sub([{ limit: 10 }])
+
+              sub.on('event', event => {
+                this.handleEvent(event)
+              })
+
+              sub.on('eose', () => {
+                console.log('End of stored events')
+              })
+            })
+
+            this.relayConnection.on('error', error => {
+              console.error(`Relay error: ${error}`)
+              this.setState({
+                error: `Failed to connect: ${error}`,
+                connected: false
+              })
+            })
+
+            this.relayConnection.on('disconnect', () => {
+              console.log('Disconnected from relay')
+              this.setState({ connected: false })
+            })
+
+            this.relayConnection.connect()
+          } catch (error) {
+            console.error('Connection error:', error)
+            this.setState({
+              error: `Error: ${error.message}`,
+              connected: false
+            })
+          }
+        }
+
+        handleEvent(event) {
+          console.log('Received event:', event)
+
+          this.setState(prevState => {
+            const newEvents = [event, ...prevState.events]
+
+            // Limit the number of events to prevent memory issues
+            if (newEvents.length > this.state.maxEvents) {
+              newEvents.length = this.state.maxEvents
+            }
+
+            return { events: newEvents }
+          })
+
+          if (this.state.autoScroll && this.eventsContainer) {
+            this.eventsContainer.scrollTop = 0
+          }
+        }
+
+        handleRelayChange(e) {
+          const relay = e.target.value
+          this.setState({ relay }, () => {
+            // Update URL with the new relay
+            const url = new URL(window.location)
+            url.searchParams.set('relay', relay)
+            window.history.pushState({}, '', url)
+
+            this.connectToRelay()
+          })
+        }
+
+        handleCustomRelayChange(e) {
+          this.setState({ customRelay: e.target.value })
+        }
+
+        handleCustomRelaySubmit(e) {
+          e.preventDefault()
+          if (this.state.customRelay) {
+            this.setState(
+              { relay: this.state.customRelay, customRelay: '' },
+              () => {
+                // Update URL with the new relay
+                const url = new URL(window.location)
+                url.searchParams.set('relay', this.state.relay)
+                window.history.pushState({}, '', url)
+
+                this.connectToRelay()
+              }
+            )
+          }
+        }
+
+        toggleAutoScroll() {
+          this.setState(prevState => ({ autoScroll: !prevState.autoScroll }))
+        }
+
+        formatTimestamp(timestamp) {
+          return new Date(timestamp * 1000).toLocaleString()
+        }
+
+        getEventKindName(kind) {
+          const kinds = {
+            0: 'Metadata',
+            1: 'Text Note',
+            2: 'Recommend Relay',
+            3: 'Contacts',
+            4: 'Direct Message',
+            5: 'Deletion',
+            6: 'Repost',
+            7: 'Reaction',
+            40: 'Channel Creation',
+            41: 'Channel Metadata',
+            42: 'Channel Message',
+            43: 'Channel Hide Message',
+            44: 'Channel Mute User'
+          }
+          return kinds[kind] || `Kind ${kind}`
+        }
+
+        formatContent(event) {
+          try {
+            switch (event.kind) {
+              case 0: // Metadata
+                const metadata = JSON.parse(event.content)
+                return html`
+                  <div class="bg-gray-750 p-3 rounded">
+                    ${metadata.name &&
+                    html`<div><strong>Name:</strong> ${metadata.name}</div>`}
+                    ${metadata.display_name &&
+                    html`<div>
+                      <strong>Display Name:</strong> ${metadata.display_name}
+                    </div>`}
+                    ${metadata.about &&
+                    html`<div><strong>About:</strong> ${metadata.about}</div>`}
+                    ${metadata.picture &&
+                    html`<div class="mt-2">
+                      <img
+                        src=${metadata.picture}
+                        class="w-16 h-16 rounded"
+                        alt="Profile"
+                      />
+                    </div>`}
+                  </div>
+                `
+              case 1: // Text Note
+                return html`<div class="mb-2 break-words whitespace-pre-wrap">
+                  ${event.content}
+                </div>`
+              case 4: // DM
+                return html`<div class="mb-2 italic text-gray-400">
+                  Encrypted direct message
+                </div>`
+              case 6: // Repost
+                try {
+                  const repostedEvent = JSON.parse(event.content)
+                  return html`
+                    <div class="border-l-4 border-blue-600 pl-3 mb-2">
+                      <div class="text-sm text-gray-400 mb-1">
+                        Reposted event:
+                      </div>
+                      <div class="break-words whitespace-pre-wrap">
+                        ${repostedEvent.content ||
+                        JSON.stringify(repostedEvent, null, 2)}
+                      </div>
+                    </div>
+                  `
+                } catch {
+                  return html`<div class="mb-2 break-words whitespace-pre-wrap">
+                    ${event.content}
+                  </div>`
+                }
+              case 7: // Reaction
+                return html`<div class="text-xl mb-2">${event.content}</div>`
+              default:
+                // For other kinds, try to parse as JSON if it looks like JSON
+                if (
+                  event.content.trim().startsWith('{') &&
+                  event.content.trim().endsWith('}')
+                ) {
+                  try {
+                    const parsed = JSON.parse(event.content)
+                    return html`<pre
+                      class="bg-gray-750 p-2 rounded overflow-auto text-xs"
+                    >
+${JSON.stringify(parsed, null, 2)}</pre
+                    >`
+                  } catch {
+                    return html`<div
+                      class="mb-2 break-words whitespace-pre-wrap"
+                    >
+                      ${event.content}
+                    </div>`
+                  }
+                }
+                return html`<div class="mb-2 break-words whitespace-pre-wrap">
+                  ${event.content}
+                </div>`
+            }
+          } catch (error) {
+            console.error('Error formatting content:', error)
+            return html`<div class="mb-2 break-words whitespace-pre-wrap">
+              ${event.content}
+            </div>`
+          }
+        }
+
+        render() {
+          const { events, connected, relay, customRelay, error, autoScroll } =
+            this.state
+
+          return html`
+            <div class="container mx-auto p-4">
+              <h1 class="text-3xl font-bold mb-4">Nostr Firehose</h1>
+
+              <div class="mb-6">
+                <div class="flex flex-col md:flex-row gap-4 mb-4">
+                  <div class="flex-1">
+                    <label class="block text-sm font-medium mb-2"
+                      >Select Relay</label
+                    >
+                    <select
+                      class="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2"
+                      value=${relay}
+                      onChange=${this.handleRelayChange}
+                    >
+                      <option value="wss://relay.damus.io">
+                        Damus (wss://relay.damus.io)
+                      </option>
+                      <option value="wss://relay.nostr.band">
+                        Nostr.band (wss://relay.nostr.band)
+                      </option>
+                      <option value="wss://nos.lol">
+                        nos.lol (wss://nos.lol)
+                      </option>
+                      <option value="wss://relay.snort.social">
+                        Snort (wss://relay.snort.social)
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="flex-1">
+                    <form onSubmit=${this.handleCustomRelaySubmit}>
+                      <label class="block text-sm font-medium mb-2"
+                        >Custom Relay URL</label
+                      >
+                      <div class="flex">
+                        <input
+                          type="text"
+                          class="flex-1 bg-gray-800 border border-gray-700 rounded-l px-3 py-2"
+                          placeholder="wss://..."
+                          value=${customRelay}
+                          onChange=${this.handleCustomRelayChange}
+                        />
+                        <button
+                          type="submit"
+                          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r"
+                        >
+                          Connect
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <div
+                      class="w-3 h-3 rounded-full ${connected
+                        ? 'bg-green-500'
+                        : 'bg-red-500'}"
+                    ></div>
+                    <span>${connected ? 'Connected' : 'Disconnected'}</span>
+                    ${connected &&
+                    html`<span class="ml-2 text-gray-400">to ${relay}</span>`}
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    <label class="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        class="sr-only peer"
+                        checked=${autoScroll}
+                        onChange=${this.toggleAutoScroll}
+                      />
+                      <div
+                        class="relative w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"
+                      ></div>
+                      <span class="ml-2">Auto-scroll</span>
+                    </label>
+                  </div>
+                </div>
+
+                ${error && html`<div class="mt-2 text-red-500">${error}</div>`}
+              </div>
+
+              <div
+                class="bg-gray-800 rounded-lg p-4 overflow-auto"
+                style="height: calc(100vh - 220px);"
+                ref=${el => (this.eventsContainer = el)}
+              >
+                ${events.length === 0 && !error
+                  ? html`<div class="text-center text-gray-500 py-8">
+                      Waiting for events...
+                    </div>`
+                  : html`<div class="space-y-4">
+                      ${events.map(
+                        (event, index) =>
+                          html`<div
+                            key=${index}
+                            class="border border-gray-700 rounded-lg p-4 bg-gray-850 hover:bg-gray-750 transition"
+                          >
+                            <div class="flex justify-between items-start mb-2">
+                              <div>
+                                <span
+                                  class="font-mono text-xs bg-blue-900 text-blue-200 px-2 py-1 rounded mr-2"
+                                >
+                                  ${this.getEventKindName(event.kind)}
+                                </span>
+                                <span class="text-gray-400 text-sm">
+                                  ID: ${event.id.substring(0, 8)}...
+                                </span>
+                              </div>
+                              <span class="text-gray-500 text-xs">
+                                ${this.formatTimestamp(event.created_at)}
+                              </span>
+                            </div>
+
+                            ${event.content && this.formatContent(event)}
+
+                            <div class="text-xs text-gray-500 font-mono">
+                              <div>
+                                Pubkey: ${event.pubkey.substring(0, 16)}...
+                              </div>
+                              ${event.tags.length > 0 &&
+                              html`<div class="mt-1">
+                                Tags:
+                                <div class="overflow-x-auto">
+                                  <table class="text-xs mt-1 w-full">
+                                    <tbody>
+                                      ${event.tags.map(
+                                        tag => html`
+                                          <tr>
+                                            <td class="pr-2 text-blue-400">
+                                              ${tag[0]}
+                                            </td>
+                                            <td class="truncate max-w-xs">
+                                              ${tag.slice(1).join(', ')}
+                                            </td>
+                                          </tr>
+                                        `
+                                      )}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>`}
+                            </div>
+
+                            <div class="mt-2 flex gap-2">
+                              <button
+                                class="text-xs text-blue-400 hover:text-blue-300"
+                                onClick=${() =>
+                                  console.log('Full event:', event)}
+                              >
+                                Log full event to console
+                              </button>
+                              <button
+                                class="text-xs text-green-400 hover:text-green-300"
+                                onClick=${() => {
+                                  navigator.clipboard.writeText(
+                                    JSON.stringify(event, null, 2)
+                                  )
+                                  alert('Event copied to clipboard')
+                                }}
+                              >
+                                Copy as JSON
+                              </button>
+                            </div>
+                          </div>`
+                      )}
+                    </div>`}
+              </div>
+
+              <div class="mt-4 text-center text-gray-500 text-sm">
+                Showing ${Math.min(events.length, this.state.maxEvents)} events
+                (max: ${this.state.maxEvents})
+              </div>
+            </div>
+          `
+        }
+      }
+
+      render(html`<${NostrFirehose} />`, document.getElementById('app'))
+    </script>
+  </body>
+</html>
